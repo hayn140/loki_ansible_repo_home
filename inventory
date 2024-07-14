@@ -1,4 +1,7 @@
 # These are the clients to be provisioned by node0-ansible
 #
-192.168.1.11
-192.168.1.12
+#node1-client.RHEL9.loki.com
+192.168.1.221
+#
+#node2-client.RHEL9.loki.com
+192.168.1.114
