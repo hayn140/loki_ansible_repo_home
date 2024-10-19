@@ -41,36 +41,6 @@ echo ""
 echo ""
 STIGID=RHEL-08-123
 
-
-# Use awk to capture and print lines above and below the found line, stopping at empty lines
-awk -v search="$STIGID" '
-    BEGIN { print_below=0 }
-    
-    # Buffer lines until we find the match
-    NF { buffer[NR] = $0 }
-    
-    # If we find the search word, print lines above and below
-    $0 ~ search {
-        # Print lines above, stopping at the first empty line
-        for (i = NR - 1; i > 0; i--) {
-            if (buffer[i] == "") break
-            print buffer[i]
-        }
-        print # print the matching line itself
-        print_below = 1
-        next
-    }
-    
-    # After the match, print lines below, stopping at the next empty line
-    print_below && NF { print }
-    print_below && !NF { exit }
-
-' "$TASKS"
-
-echo ""
-echo ""
-
-
 # Use awk to print lines above the found line, stopping at empty lines
 awk -v search="$STIGID" '
     BEGIN { above_count = 0 }
@@ -95,6 +65,3 @@ awk -v search="$STIGID" '
     }
 
 ' "$TASKS" | tac
-
-
-
