@@ -1,0 +1,22 @@
+---
+
+# Ansible TASKS
+
+- name: First task
+  ansible.builtin.package:
+    name: httpd
+    state: present
+  when: 
+    - RHEL-08-123 | bool
+  register: installed_package
+  notify: restart apache
+
+- name: Second task
+  ansible.posix.firewalld:
+    service: http
+    state: enabled
+    immediate: true
+    permanent: true
+  when:
+    - RHEL-08-124 | bool
+  

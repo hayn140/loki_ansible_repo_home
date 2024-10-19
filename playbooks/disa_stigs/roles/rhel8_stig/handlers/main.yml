@@ -1,0 +1,8 @@
+---
+
+# Ansible HANDLERS
+
+- name: restart apache
+  ansible.builtin.service:
+    name: httpd
+    state: started
