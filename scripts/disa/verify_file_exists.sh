@@ -1,8 +1,7 @@
 #!/bin/bash
 
-TASKS="/Users/lokialohikea/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/tasks/main.yml"
-HANDLERS="/Users/lokialohikea/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/handlers/main.yml"
-
+TASKS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/tasks/main.yml
+HANDLERS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/handlers/main.yml
 # Function to verify the file path is valid
 
 verify_file_exists() {

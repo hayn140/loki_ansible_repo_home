@@ -2,8 +2,8 @@
 
 # Declare the STIG YAML files (TASKS & HANDLERS) and RHEL distribution (RHEL_VERSION)
 
-TASKS=/Users/lokialohikea/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/tasks/main.yml
-HANDLERS=/Users/lokialohikea/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/handlers/main.yml
+TASKS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/tasks/main.yml
+HANDLERS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/handlers/main.yml
 RHEL_VERSION=8
 
 
