@@ -2,6 +2,7 @@
 
 TASKS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/tasks/main.yml
 HANDLERS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/handlers/main.yml
+STIGID="RHEL-08-123"
 
 ###################################################################################################
 # # This block of Code will make sure that the files defined in the TASKS and HANDLERS variables
@@ -169,31 +170,55 @@ HANDLERS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/handlers
 
 #########################################################################################
 
-#!/bin/bash
+# # This block of code can find the STIGID line numbers and list the number in a loop until
+# # there are no more results.
 
-# Define the STIGID variable
-STIGID="RHEL-08-123"  # Replace with your actual STIGID value
+# # Define the STIGID variable
+# STIGID="RHEL-08-123"  # Replace with your actual STIGID value
 
-# Define a variable to keep track of the starting point
-start_line=0
+# # Define a variable to keep track of the starting point
+# start_line=0
 
-while true; do
-    # Use grep to find the STIGID, starting from the last found line + 1
-    result=$(grep -n "$STIGID" "$TASKS" | awk -v start="$start_line" -F: '$1 > start {print $1; exit}')
+# while true; do
+#     # Use grep to find the STIGID, starting from the last found line + 1
+#     result=$(grep -n "$STIGID" "$TASKS" | awk -v start="$start_line" -F: '$1 > start {print $1; exit}')
     
-    if [[ -z $result ]]; then
-        # If no result was found, break the loop
-        echo "No more results found."
-        break
-    else
-        # Print the line number of the found result
-        echo "Found STIGID at line: $result"
+#     if [[ -z $result ]]; then
+#         # If no result was found, break the loop
+#         echo "No more results found."
+#         break
+#     else
+#         # Print the line number of the found result
+#         echo "Found STIGID at line: $result"
         
-        # Update the start_line to the found line number for the next iteration
-        start_line=$result
-    fi
+#         # Update the start_line to the found line number for the next iteration
+#         start_line=$result
+#     fi
+# done
+
+##############################################################################################
+TAG_CHOICE=cat1
+STIGID_LINES=$(grep -n $STIGID $TASKS | cut -d ':' -f 1)
+
+for LINE in $STIGID_LINES
+do
+
+# Print line numbers where STIGIDs are located
+echo "Line $LINE"
+
+# Print strings found at line numbers, should be STIGIDs
+sed -n "${LINE}p" "$TASKS"
+
+# Starting at the first line number in the for loop, 
+#   find the line number of the next empty line
+START_LINE=$LINE
+LINE_NUMBER=$(awk -v start="$START_LINE" 'NR >= start && /^$/ {print NR; exit}' "$TASKS")
+
+echo "The next empty line is at line number: $LINE_NUMBER"
+
+# Add an ansible tag at the line number of the next empty line
+STRING=" tags: $TAG_CHOICE
+"
+sed -i "${LINE_NUMBER}i\ ${STRING}" "$TASKS"
+
 done
-
-
-
-

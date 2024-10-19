@@ -192,3 +192,34 @@ echo ""
 done
 
 echo ""
+
+tag_tasks() {
+
+STIGID_LINES=$(grep -n $STIGID $TASKS | cut -d ':' -f 1)
+
+for LINE in $STIGID_LINES
+do
+
+# Print line numbers where STIGIDs are located
+echo "Line $LINE"
+
+# Print strings found at line numbers, should be STIGIDs
+sed -n "${LINE}p" "$TASKS"
+
+# Starting at the first line number in the for loop, 
+#   find the line number of the next empty line
+START_LINE=$LINE
+LINE_NUMBER=$(awk -v start="$START_LINE" 'NR >= start && /^$/ {print NR; exit}' "$TASKS")
+
+echo "The next empty line is at line number: $LINE_NUMBER"
+
+# Add an ansible tag at the line number of the next empty line
+STRING=" tags: $TAG_CHOICE
+"
+sed -i "${LINE_NUMBER}i\ ${STRING}" "$TASKS"
+
+done
+
+}
+
+tag_tasks
