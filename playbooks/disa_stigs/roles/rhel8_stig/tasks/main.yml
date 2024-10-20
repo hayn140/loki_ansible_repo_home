@@ -10,7 +10,6 @@
     - RHEL-08-123 | bool
   register: installed_package
   notify: restart apache
-  tags: cat3,cat_all
 
 - name: Second task
   ansible.posix.firewalld:
@@ -20,7 +19,6 @@
     permanent: true
   when:
     - RHEL-08-123 | bool
-  tags: cat2,cat3,cat_all
   
 - name: Third task
   ansible.builtin.debug:
@@ -28,7 +26,6 @@
   when:
     - RHEL-08-124 | bool ##
   ignore_errors: true
-  tags: cat_all
 
 - name: Fourth task
   ansible.builtin.package:
@@ -37,8 +34,7 @@
   when: 
     - RHEL-08-123 | bool
   register: installed_package
-  notify: restart apache
-  tags: cat1,cat2,cat3,cat_all
+  notify: reload firewall
 
 - name: Fifth task
   ansible.posix.firewalld:
@@ -48,7 +44,9 @@
     permanent: true
   when:
     - RHEL-08-124 | bool
-  tags: cat_all
+  notify:
+    - restart apache
+    - lose my mind
   
 - name: Sixth task
   ansible.builtin.debug:
@@ -56,5 +54,3 @@
   when:
     - RHEL-08-123 | bool ##
   ignore_errors: true
-  tags: cat1,cat2,cat3,cat_all,cat_all
-

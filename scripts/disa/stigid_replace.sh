@@ -88,7 +88,8 @@ $RHEL_STIGID_PREFIX
                 break
             else
                 echo ""
-                echo "Please adjust the TASKS, HANDLERS, and/or RHEL_VERSION variables with the correct information then rerun the script."
+                echo "Please adjust the TASKS, HANDLERS, and/or RHEL_VERSION variables with the correct information then re-run the script."
+                echo ""
                 exit
             fi
         else
@@ -196,15 +197,17 @@ echo ""
 # Define STIGID variable
 STIGID="${RHEL_STIGID_PREFIX}-${STIGID_NUM}"
 
-# Ensure there's two empty lines at the end of the file for this script to work
+# Ensure there's two empty lines at the end of the TASKS and HANDLERS file for this script to work
 sed -i -e '$!b' -e '/^$/!a\' -e '' "$TASKS"
+sed -i -e '$!b' -e '/^$/!a\' -e '' "$HANDLERS"
 
-###############################################################################
+###########################################################################################
+# TAGGING_TASKS *** TAGGING_TASKS *** TAGGING_TASKS *** TAGGING_TASKS *** TAGGING_TASKS ***
+###########################################################################################
 
-# Create a function to find line numbers matching STIGID, find the line number of the next
-#     empty line, then add the corresponding TAG_CHOICE
-
-tag_tasks() {
+# Find line numbers matching STIGID, find the line number of the next
+#       empty line, then add the corresponding TAG_CHOICE. Then check for notify handlers
+#       and tag those tasks in the handlers/main.yml file as well.
 
 # Parse through the TASKS file and find all STIGID lines and output the line number,
 #     reverse the order of the grep results, then isolate just the numbers and assign 
@@ -221,6 +224,7 @@ do
     echo ""
     echo "Found a match for keyword '$STIGID' on line $LINE"
     echo ""
+    echo "Task:"
         # Create function to display the found task
 
         display_found_task() {
@@ -253,7 +257,7 @@ do
         while true
         do
 
-        read -p "Do you want to continue tagging this task? (y/n) " CONTINUE_B
+        read -p "Do you want to tag this task with the $TAG_CHOICE tag? (y/n) " CONTINUE_B
             if [[ "$CONTINUE_B" == "y" || "$CONTINUE_B" == "n" ]]; then   
                 if [[ "$CONTINUE_B" == "y" ]]; then
                     
@@ -265,40 +269,149 @@ do
                         # Extract the line previous to the empty line
                         PREVIOUS_LINE=$(sed -n "$((LINE_NUMBER - 1))p" "$TASKS")
 
-                        # Check if the line previous to the empty line starts with '  tags:'
-                        if [[ $PREVIOUS_LINE =~ "  tags:"* ]]; then
+                    # Check if the line previous to the empty line starts with '  tags:'
+                    if [[ $PREVIOUS_LINE =~ "  tags:"* ]]; then
                             
-                            # Append tag to already existing tags line
-                            NEW_LINE_NUMBER=$((LINE_NUMBER - 1))
-                            echo ""
-                            echo "This task already has tags: '$PREVIOUS_LINE'"
-                            echo ""
-                            echo "Appending '$TAG_CHOICE' to existing tags. (Line $NEW_LINE_NUMBER)"
-                            echo ""
-                            sed -i "$((LINE_NUMBER - 1))s/$/,$TAG_CHOICE/" "$TASKS"
+                        # Append tag to already existing tags line
+                        NEW_LINE_NUMBER=$((LINE_NUMBER - 1))
+                        echo ""
+                        echo "This task already has tags: '$PREVIOUS_LINE'"
+                        echo ""
+                        echo "Appending '$TAG_CHOICE' to existing tags. (Line $NEW_LINE_NUMBER)"
+                        echo ""
+                        sed -i "$((LINE_NUMBER - 1))s/$/,$TAG_CHOICE/" "$TASKS"
 
-                        else
-                            # Add a new tags line to the task
-                            echo ""
-                            echo "A new 'tags:' line will be added to this task. (Line $LINE_NUMBER)"
-                            echo ""
+                    else
+                        # Add a new tags line to the task
+                        echo ""
+                        echo "A new 'tags:' line will be added to this task. (Line $LINE_NUMBER)"
+                        echo ""
 
-                            STRING=" tags: $TAG_CHOICE
-                            "
-                            sed -i "${LINE_NUMBER}i\ ${STRING}" "$TASKS"
+                        STRING=" tags: $TAG_CHOICE
+                        "
+                        sed -i "${LINE_NUMBER}i\ ${STRING}" "$TASKS"
                         
-                        fi
+                    fi
                     
                     sleep 1
 
                     echo ""
-                    echo "Result: "
+                    echo "Task Result: "
                     
                     # Call on display_found_task function
                     display_found_task
                     echo ""
+                    read -p "Pausing. Hit ENTER to continue..." PAUSE
+                    echo ""
+                    echo "Checking for 'notify' handlers..."
+                    echo ""
                     sleep 1
+                    #########################################################################
+                    # HANDLERS HANDLERS HANDLERS HANDLERS HANDLERS HANDLERS HANDLERS HANDLERS
+                    
+                    # Check for handlers in the task
+                    
+                    NOTIFY_VALUE=$(display_found_task | grep -n "notify:" | cut -d ":" -f 3)
 
+                    if [[ -n "$NOTIFY_VALUE" ]]; then  # IF $NOTIFY_VALUE is NOT empty
+                        
+                        HANDLER_LINE_NUM=$(grep -n "$NOTIFY_VALUE" "$HANDLERS" | cut -d ":" -f 1)
+                        echo "Found corresponding notify handler with title '$NOTIFY_VALUE' at Line $HANDLER_LINE_NUM in Handlers file."
+                        echo ""
+                        echo "Handler TASK:"
+                        # Create function to display the found handler
+
+                        display_found_handler() {
+                            echo "---------------------------"
+                            echo ""
+
+                            # Extract lines from $HANDLER_LINE_NUM onward, stop at the next empty line
+                            tail -n +"$HANDLER_LINE_NUM" "$HANDLERS" | awk 'NF {print} !NF {exit}'
+                            echo ""
+                            echo "---------------------------"
+                            echo ""
+                        }
+        
+                        # Call on display_found_handler function
+
+                        display_found_handler
+                        
+                        # Find next empty line in corresponding Handler task
+                        EMPTY_LINE_NUMBER=$(awk -v start="$HANDLER_LINE_NUM" 'NR >= start && /^[[:space:]]*$/ {print NR; exit}' "$HANDLERS")
+                        while true
+                        do
+                        read -p "Do you want to tag this handler task with the '$TAG_CHOICE' tag? (y/n) " CONTINUE_C
+                            if [[ "$CONTINUE_C" == "y" || "$CONTINUE_C" == "n" ]]; then   
+                                if [[ "$CONTINUE_C" == "y" ]]; then
+                                    
+                                # Add an ansible tag at the line number of the next empty line
+                                #   if the handler task doesn't already have a tags line, if it does,
+                                #   append the TAG_CHOICE to the existing tags line.
+                                    
+                                    # Check if handler task has a tags line
+                                        # Extract the line value previous to the empty line
+                                        PREVIOUS_LINE_2=$(sed -n "$((EMPTY_LINE_NUMBER - 1))p" "$HANDLERS")
+
+                                    # Check if the line previous to the empty line starts with '  tags:'
+                                    if [[ $PREVIOUS_LINE_2 =~ "  tags:"* ]]; then
+                                            
+                                        # Append tag to already existing tags line
+                                        NEW_LINE_NUMBER_2=$((EMPTY_LINE_NUMBER - 1))
+                                        echo ""
+                                        echo "This task already has tags: '$PREVIOUS_LINE_2'"
+                                        echo ""
+                                        echo "Appending '$TAG_CHOICE' to existing tags. (Line $NEW_LINE_NUMBER_2)"
+                                        echo ""
+                                        sed -i "$((EMPTY_LINE_NUMBER - 1))s/$/,$TAG_CHOICE/" "$HANDLERS"
+
+                                    else
+                                        # Add a new tags line to the task
+                                        echo ""
+                                        echo "A new 'tags:' line will be added to this handler task. (Line $EMPTY_LINE_NUMBER)"
+                                        echo ""
+
+                                        STRING=" tags: $TAG_CHOICE
+                                        "
+                                        sed -i "${EMPTY_LINE_NUMBER}i\ ${STRING}" "$HANDLERS"
+                                        
+                                    fi
+                                    
+                                    sleep 1
+
+                                    echo ""
+                                    echo "Handler Result: "
+                                    
+                                    # Call on display_found_handler function
+                                    display_found_handler
+
+                                    echo ""
+                                    sleep 1
+                                    break
+                                
+                                else
+                                    
+                                    echo ""
+                                    echo "Skipping this task..."
+                                    break
+
+                                fi
+
+                            else
+                                echo "Invalid input. Please enter 'y' or 'n'."
+                    
+                            fi                        
+                        done
+                    else
+                        echo "No handlers found in this task."
+                    
+                    fi
+
+                    # HANDLERS HANDLERS HANDLERS HANDLERS HANDLERS HANDLERS HANDLERS HANDLERS
+                    #########################################################################
+
+                    echo ""
+                    sleep 1
+                    read -p "Pausing. Hit ENTER to continue..." PAUSE  ## Delete this line when you're done
                     break
                 
                 else
@@ -318,8 +431,11 @@ do
     sleep 1
 
 done
-}
 
-# Call on function
+echo "
 
-tag_tasks
+"
+echo "Tagging Complete!"
+echo "
+
+"

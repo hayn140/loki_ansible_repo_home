@@ -6,3 +6,12 @@
   ansible.builtin.service:
     name: httpd
     state: started
+
+- name: reload firewall
+  ansible.builtin.service:
+    name: firewalld
+    state: restarted
+
+- name: lose my mind
+  ansible.builtin.debug:
+    msg: "oh my gosh"
