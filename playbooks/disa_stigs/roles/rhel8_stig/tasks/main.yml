@@ -10,6 +10,7 @@
     - RHEL-08-123 | bool
   register: installed_package
   notify: restart apache
+  tags: cat3,cat_all
 
 - name: Second task
   ansible.posix.firewalld:
@@ -18,5 +19,42 @@
     immediate: true
     permanent: true
   when:
-    - RHEL-08-124 | bool
+    - RHEL-08-123 | bool
+  tags: cat2,cat3,cat_all
   
+- name: Third task
+  ansible.builtin.debug:
+    vars: installed_package
+  when:
+    - RHEL-08-124 | bool ##
+  ignore_errors: true
+  tags: cat_all
+
+- name: Fourth task
+  ansible.builtin.package:
+    name: httpd
+    state: present
+  when: 
+    - RHEL-08-123 | bool
+  register: installed_package
+  notify: restart apache
+  tags: cat1,cat2,cat3,cat_all
+
+- name: Fifth task
+  ansible.posix.firewalld:
+    service: http
+    state: enabled
+    immediate: true
+    permanent: true
+  when:
+    - RHEL-08-124 | bool
+  tags: cat_all
+  
+- name: Sixth task
+  ansible.builtin.debug:
+    vars: installed_package
+  when:
+    - RHEL-08-123 | bool ##
+  ignore_errors: true
+  tags: cat1,cat2,cat3,cat_all,cat_all
+

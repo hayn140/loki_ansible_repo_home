@@ -193,3 +193,5 @@ done
 
 echo ""
 
+# Ensure there's two empty lines at the end of the file for this script to work
+sed -i -e '$!b' -e '/^$/!a\' -e '' "$TASKS"

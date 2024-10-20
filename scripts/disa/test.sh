@@ -4,6 +4,9 @@ TASKS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/tasks/main.
 HANDLERS=~/loki_ansible_repo_home/playbooks/disa_stigs/roles/rhel8_stig/handlers/main.yml
 STIGID="RHEL-08-123"
 
+# Ensure there's two empty lines at the end of the file for this script to work
+sed -i -e '$!b' -e '/^$/!a\' -e '' "$TASKS"
+
 ###################################################################################################
 
 # # This block of Code will make sure that the files defined in the TASKS and HANDLERS variables
@@ -320,7 +323,7 @@ STIGID="RHEL-08-123"
 # This block of code will attempt to check for tags: and if doesnt exist add the line, if it does, 
 #   append TAG_CHOICE to the line
 
-TAG_CHOICE=cat1
+TAG_CHOICE=cat_all
 
 # Create a function to find line numbers matching STIGID, find the line number of the next
 #     empty line, then add the corresponding TAG_CHOICE
@@ -378,18 +381,43 @@ do
             if [[ "$CONTINUE_B" == "y" || "$CONTINUE_B" == "n" ]]; then   
                 if [[ "$CONTINUE_B" == "y" ]]; then
                     
-                    # Add an ansible tag at the line number of the next empty line
+                # Add an ansible tag at the line number of the next empty line
+                #   if the task doesn't already have a tags line, if it does,
+                #   append the TAG_CHOICE to the existing tags line.
                     
-                    echo ""
-                    echo "Adding ansible tag '$TAG_CHOICE' at line $LINE_NUMBER..."
+                    # Check if task has a tags line
+                        # Extract the line previous to the empty line
+                        PREVIOUS_LINE=$(sed -n "$((LINE_NUMBER - 1))p" "$TASKS")
+
+                        # Check if the line previous to the empty line starts with '  tags:'
+                        if [[ $PREVIOUS_LINE =~ "  tags:"* ]]; then
+                            
+                            # Append tag to already existing tags line
+                            NEW_LINE_NUMBER=$((LINE_NUMBER - 1))
+                            echo ""
+                            echo "This task already has tags: '$PREVIOUS_LINE'"
+                            echo ""
+                            echo "Appending '$TAG_CHOICE' to existing tags. (Line $NEW_LINE_NUMBER)"
+                            echo ""
+                            sed -i "$((LINE_NUMBER - 1))s/$/,$TAG_CHOICE/" "$TASKS"
+
+                        else
+                            # Add a new tags line to the task
+                            echo ""
+                            echo "A new 'tags:' line will be added to this task. (Line $LINE_NUMBER)"
+                            echo ""
+
+                            STRING=" tags: $TAG_CHOICE
+                            "
+                            sed -i "${LINE_NUMBER}i\ ${STRING}" "$TASKS"
+                        
+                        fi
                     
-                    STRING=" tags: $TAG_CHOICE
-                    "
-                    sed -i "${LINE_NUMBER}i\ ${STRING}" "$TASKS"
                     sleep 1
 
                     echo ""
                     echo "Result: "
+                    
                     # Call on display_found_task function
                     display_found_task
                     echo ""
