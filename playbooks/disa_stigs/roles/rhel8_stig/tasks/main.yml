@@ -1,56 +1,86 @@
 ---
+##############################
+# GRUB SUPERUSER CONFIGURATION
+##############################
+# The following tasks are interactiev and will allow the user to create a unique GRUB superuser username and password
 
-# Ansible TASKS
-
-- name: First task
-  ansible.builtin.package:
-    name: httpd
-    state: present
-  when: 
-    - RHEL-08-123 | bool
-  register: installed_package
-  notify: restart apache
-
-- name: Second task
-  ansible.posix.firewalld:
-    service: http
-    state: enabled
-    immediate: true
-    permanent: true
+- name: Prompt User - Set Grub USERNAME & PASSWORD - (RHEL-09-212010)
+  ansible.builtin.pause:
+    prompt: |
+      ############################################################
+      "Do you want to set a unique Grub USERNAME & PASSWORD?
+      If not, you will need to configure this manually. 
+      Type 'yes' or 'no' and hit 'ENTER'"
+      ############################################################
+  register: set_grubuserpass_response
+  delegate_to: all
+  run_once: true
   when:
-    - RHEL-08-123 | bool
+  - rhel_09_212020 | bool
+  tags: cat_all, cat1
+
+- name: Set 'proceed_with_set_grubuserpass' variable - (RHEL-09-212010)
+  ansible.builtin.set_fact:
+    proceed_with_set_grubuserpass: "{{ set_grubuserpass_response['user_input'] | lower == 'yes' }}"
+  delegate_to: all
+  run_once: true
+  when:
+  - set_grubuserpass_response
+  - rhel_09_212020 | bool
+  tags: cat_all, cat1
+
+- name: Enter and Confirm Unique GRUB Superuser USERNAME - (RHEL-09-212010)
+  block:
+    - name: Prompt user for a GRUB Superuser USERNAME
+      ansible.builtin.pause:
+        prompt: |
+          ############################################################
+          "Please type a unique USERNAME you'd like to use for your GRUB Superuser and hit 'ENTER'.
+          Do not use 'root' or 'admin' or 'administrator'.
+          ############################################################
+      register: grub_sueruser_username
+
+    - name: Confirm GRUB Superuser USERNAME
+      ansible.builtin.pause:
+        prompt: |
+          ############################################################
+          "Please confirm your GRUB Superuser USERNAME and hit 'ENTER'
+          If you made a mistake, please restart this playbookk.
+      register: grub_superuser_username_confirm
+      until: grub_superuser_username_confirm.user_input == grub_superuser_username.user_input
+      retries: 5
+
+  rescue:
+    - name: Proceed with Playbook
+      ansible.builtin.debug:
+        msg: |
+          ############################################################
+          "Usernames do not match after 5 attempts.  Continuing playbook WITHOUT setting a Unique GRUB Superuser USERNAME and PASSWORD.
+          You will need to either re-run this playbook or configure the GRUB Superuser manually."
+          ############################################################
+  delegate_to: all
+  run_once: true
+  when:
+  - prcoeed_with_set_grubuserpass
+  - rhel_09_212020 | bool
+  tags: cat_all, cat1
+
+- name: Create unique GRUB Superuser USERNAME (BIOS) - (RHEL-09-212010)
+  ansible.builtin.replace:
+    path: "{{ item.grub_config_path }}"
+    regexp: "{{ item.grub_config_regex }}"
+    replace: "{{ item.grub_config_replace }}"
+  loop:
+    - grub_config_path: /etc/grub.d/01_users
+      grub_config_regex: 'set superusers=.*'
+      grub_config_replace: 'set superusers="{{ grub_superuser_username.user_input }}"'
+    - grub_config_path: /etc/grub.d/01_users
+      grub_config_regex: 'password_pbkdf2.*'
+      grub_config_replace: 'password_pbkdf2 "{{ grub_superuser_username.user_input }}" \${GRUB2_PASSWORD}'
+  notify: Regenerate grub config file 
+  when:
+  - proceed_with_set_grubuserpass
+  - rhel_09_212020 | bool
+  - grub_superuser_username_confirm.user_input == grub.superuser_username.user_input
+  tags: cat_all, cat1
   
-- name: Third task
-  ansible.builtin.debug:
-    vars: installed_package
-  when:
-    - RHEL-08-124 | bool ##
-  ignore_errors: true
-
-- name: Fourth task
-  ansible.builtin.package:
-    name: httpd
-    state: present
-  when: 
-    - RHEL-08-123 | bool
-  register: installed_package
-  notify: reload firewall
-
-- name: Fifth task
-  ansible.posix.firewalld:
-    service: http
-    state: enabled
-    immediate: true
-    permanent: true
-  when:
-    - RHEL-08-124 | bool
-  notify:
-    - restart apache
-    - lose my mind
-  
-- name: Sixth task
-  ansible.builtin.debug:
-    vars: installed_package
-  when:
-    - RHEL-08-123 | bool ##
-  ignore_errors: true
