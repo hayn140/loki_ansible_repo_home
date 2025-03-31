@@ -2,13 +2,13 @@
 ##############################
 # GRUB SUPERUSER CONFIGURATION
 ##############################
-# The following tasks are interactiev and will allow the user to create a unique GRUB superuser username and password
+# The following tasks are interactive and will allow the user to create a unique GRUB superuser username and password
 
-- name: Prompt User - Set Grub USERNAME & PASSWORD - (RHEL-09-212010)
+- name: Prompt User - Set GRUB USERNAME & PASSWORD - (RHEL-09-212010)
   ansible.builtin.pause:
     prompt: |
       ############################################################
-      "Do you want to set a unique Grub USERNAME & PASSWORD?
+      "Do you want to set a unique GRUB USERNAME & PASSWORD?
       If not, you will need to configure this manually. 
       Type 'yes' or 'no' and hit 'ENTER'"
       ############################################################
@@ -16,7 +16,7 @@
   delegate_to: all
   run_once: true
   when:
-  - rhel_09_212020 | bool
+  - rhel_09_212010 | bool
   tags: cat_all, cat1
 
 - name: Set 'proceed_with_set_grubuserpass' variable - (RHEL-09-212010)
@@ -26,7 +26,7 @@
   run_once: true
   when:
   - set_grubuserpass_response
-  - rhel_09_212020 | bool
+  - rhel_09_212010 | bool
   tags: cat_all, cat1
 
 - name: Enter and Confirm Unique GRUB Superuser USERNAME - (RHEL-09-212010)
@@ -36,18 +36,18 @@
         prompt: |
           ############################################################
           "Please type a unique USERNAME you'd like to use for your GRUB Superuser and hit 'ENTER'.
-          Do not use 'root' or 'admin' or 'administrator'.
+          (Do not use 'root' or 'admin' or 'administrator')"
           ############################################################
-      register: grub_sueruser_username
+      register: grub_superuser_username
 
     - name: Confirm GRUB Superuser USERNAME
       ansible.builtin.pause:
         prompt: |
           ############################################################
           "Please confirm your GRUB Superuser USERNAME and hit 'ENTER'
-          If you made a mistake, please restart this playbookk.
+          If you made a mistake, please restart this playbook."
       register: grub_superuser_username_confirm
-      until: grub_superuser_username_confirm.user_input == grub_superuser_username.user_input
+      until: grub_superuser_username_confirm['user_input'] == grub_superuser_username['user_input']
       retries: 5
 
   rescue:
@@ -61,8 +61,8 @@
   delegate_to: all
   run_once: true
   when:
-  - prcoeed_with_set_grubuserpass
-  - rhel_09_212020 | bool
+  - proceed_with_set_grubuserpass
+  - rhel_09_212010 | bool
   tags: cat_all, cat1
 
 - name: Create unique GRUB Superuser USERNAME (BIOS) - (RHEL-09-212010)
@@ -73,14 +73,21 @@
   loop:
     - grub_config_path: /etc/grub.d/01_users
       grub_config_regex: 'set superusers=.*'
-      grub_config_replace: 'set superusers="{{ grub_superuser_username.user_input }}"'
+      grub_config_replace: 'set superusers="{{ grub_superuser_username['user_input'] }}"'
     - grub_config_path: /etc/grub.d/01_users
       grub_config_regex: 'password_pbkdf2.*'
-      grub_config_replace: 'password_pbkdf2 "{{ grub_superuser_username.user_input }}" \${GRUB2_PASSWORD}'
+      grub_config_replace: 'password_pbkdf2 "{{ grub_superuser_username['user_input'] }}" \${GRUB2_PASSWORD}'
   notify: Regenerate grub config file 
   when:
   - proceed_with_set_grubuserpass
-  - rhel_09_212020 | bool
-  - grub_superuser_username_confirm.user_input == grub.superuser_username.user_input
+  - rhel_09_212010 | bool
+  - grub_superuser_username_confirm['user_input'] == grub_superuser_username['user_input']
   tags: cat_all, cat1
-  
+
+- name: Install cronie
+  ansible.builtin.package:
+    name: cronie
+    state: latest
+  when:
+  - rhel_09_222040 | bool
+  tags: cat_all, cat2
