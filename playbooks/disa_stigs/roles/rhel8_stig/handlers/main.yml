@@ -2,16 +2,10 @@
 
 # Ansible HANDLERS
 
-- name: restart apache
-  ansible.builtin.service:
-    name: httpd
-    state: started
+- name: Regenerate grub config file
+  ansible.builtin.command: grub2-mkconfig -o /boot/grub2/grub.cfg
 
-- name: reload firewall
+- name: Restart chronyd
   ansible.builtin.service:
-    name: firewalld
+    name: chronyd
     state: restarted
-
-- name: lose my mind
-  ansible.builtin.debug:
-    msg: "oh my gosh"
