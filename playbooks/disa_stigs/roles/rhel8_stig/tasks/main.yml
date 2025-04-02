@@ -46,6 +46,7 @@
           ############################################################
           "Please confirm your GRUB Superuser USERNAME and hit 'ENTER'
           If you made a mistake, please restart this playbook."
+          ############################################################
       register: grub_superuser_username_confirm
       until: grub_superuser_username_confirm['user_input'] == grub_superuser_username['user_input']
       retries: 5
